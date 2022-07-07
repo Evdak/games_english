@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 
 import random
@@ -429,4 +430,9 @@ async def WHN(msg_box, name):
 
 
 if __name__ == "__main__":
-    start_server(main)
+    # start_server(main, debug=False, port=8080, cdn=False)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--port", type=int, default=8080)
+    args = parser.parse_args()
+
+    start_server(main, port=args.port)
