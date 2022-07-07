@@ -8,38 +8,59 @@ from pywebio.input import *
 from pywebio.output import *
 from pywebio.session import defer_call, info as session_info, run_async, run_js
 
-from config import ADMIN_NAME, ADMIN_PASSWORD, GAMES, GAME_CROCODILE_WORDS
-
-chat_msgs = []
-online_users = set()
-is_started = False
-
-WHN_dict = {
-    'is_started': False,
-    'current_state': None,
-    'current_user': None,
-    'task': None,
-    'score': {},
-    'scored': 0
-}
-
-random.shuffle(GAME_CROCODILE_WORDS)
-
-CROCODILE_dict = {
-    'words': GAME_CROCODILE_WORDS.copy(),
-    'task': None,
-    'current_state': None,
-    'current_user': None,
-    'current_word': None,
-    'users': None,
-    'users_showed': [],
-    'answered': 0
-}
+from config import ADMIN_NAME, ADMIN_PASSWORD, GAMES, GAME_CROCODILE_WORDS, GAME_WHO_WORDS
 
 
-MAX_MESSAGES_COUNT = 100
+def start(event=None):
+    global chat_msgs, online_users, is_started, WHN_dict, CROCODILE_dict, WHO_dict, MAX_MESSAGES_COUNT, games
 
-games = [None]
+    chat_msgs = []
+    online_users = set()
+    is_started = False
+
+    WHN_dict = {
+        'is_started': False,
+        'current_state': None,
+        'current_user': None,
+        'task': None,
+        'score': {},
+        'scored': 0
+    }
+
+    random.shuffle(GAME_CROCODILE_WORDS)
+    random.shuffle(GAME_WHO_WORDS)
+
+    CROCODILE_dict = {
+        'words': GAME_CROCODILE_WORDS.copy(),
+        'task': None,
+        'current_state': None,
+        'current_user': None,
+        'current_word': None,
+        'users': None,
+        'users_showed': [],
+        'answered': 0
+    }
+
+    WHO_dict = {
+        'words': GAME_WHO_WORDS.copy(),
+        'task': None,
+        'current_state': None,
+        'current_user': None,
+        'current_word': None,
+        'users': None,
+        'users_showed': [],
+        'answered': 0
+    }
+
+    MAX_MESSAGES_COUNT = 100
+
+    games = [None]
+
+    if event:
+        run_js('document.location.reload();')
+
+
+start()
 
 
 def start_game(sender, **args):
@@ -71,6 +92,7 @@ async def main():
 
     if role == 'Ведущий':
         put_buttons(['Start'], onclick=start_game)
+        put_buttons(['End'], onclick=start)
     try:
         game = game if game else None
     except:
@@ -102,9 +124,9 @@ async def check_is_started(msg_box, name, game=None):
         await asyncio.sleep(1)
 
         if is_started:
-            msg_box.append(put_markdown(f"Игра началась!"))
+            msg_box.append(put_markdown(f"`📢`: Игра началась!"))
             if games[0] == 'ЧБД':
-                msg_box.append(put_markdown(f"""ПРАВИЛА ИГРЫ:
+                msg_box.append(put_markdown(f"""`📢`: ПРАВИЛА ИГРЫ:
                 Сейчас ведущий пришлет начало истории, затем запустится таймер (3 минуты).
                 В это время вы можете начать записывать ваш вариант продолжения истории, затем когда наступит ваша очередь, запустится таймер на 5 минут и вы начнете отвечать."""))
                 WHN_dict['is_started'] = True
@@ -112,11 +134,17 @@ async def check_is_started(msg_box, name, game=None):
                 run_async(WHN_end(msg_box, name))
 
             if games[0] == 'Крокодил':
-                msg_box.append(put_markdown(f"""ПРАВИЛА ИГРЫ:
+                msg_box.append(put_markdown(f"""`📢`: ПРАВИЛА ИГРЫ:
                 Сейчас по очереди будут высвечиваться карточки со словами.
                 Вы его описываете, а другие угадывают."""))
 
                 run_async(crocodile(msg_box, name))
+
+            if games[0] == 'Кто я? Что я?':
+                msg_box.append(put_markdown(f"""`📢`: ПРАВИЛА ИГРЫ:
+                ......"""))
+
+                run_async(who(msg_box, name))
 
             break
 
@@ -141,7 +169,14 @@ async def crocodile(msg_box, name):
 
     if CROCODILE_dict['users'] is None:
         CROCODILE_dict['users'] = online_users_copy.copy()
-        print(online_users_copy)
+
+    style(put_scope('out'),
+          """display:flex;
+            justify-content:stretch;
+            font-weight: 400;
+            font-size: larger;
+            flex-direction: column;
+          """)
 
     while True:
         if CROCODILE_dict['answered'] != (len(online_users) - 1):
@@ -161,13 +196,13 @@ async def crocodile(msg_box, name):
                 if name not in CROCODILE_dict['users_showed']:
 
                     if name == CROCODILE_dict['current_user']:
-
-                        put_text(
-                            f"""Слово - {CROCODILE_dict['current_word']} """)
+                        with use_scope('out'):
+                            clear('out')
+                            put_success(
+                                f"""Слово - {CROCODILE_dict['current_word']} """)
                         CROCODILE_dict['current_state'] = 'guessing'
 
                         def make_guessed():
-                            print('ДО', CROCODILE_dict)
                             CROCODILE_dict['current_state'] = 'guessed'
                             CROCODILE_dict['answered'] += 1
 
@@ -176,30 +211,122 @@ async def crocodile(msg_box, name):
 
                             CROCODILE_dict['users_showed'].clear()
 
-                            print('ПОСЛЕ', CROCODILE_dict)
-
                             return
-                        put_button('Угадано', onclick=make_guessed)
+                        with use_scope('out'):
+                            style(put_button('Угадано', onclick=make_guessed),
+                                  """
+                                width: -webkit-fill-available;
+                                font-size: larger;
+                            """
+                                  )
 
                     elif name == ADMIN_NAME:
-                        put_text(
-                            f"""Отвечает - {CROCODILE_dict['current_user']}\nСлово - {CROCODILE_dict['current_word']} """)
+                        with use_scope('out'):
+                            clear('out')
+                            put_success(
+                                f"""Отвечает - {CROCODILE_dict['current_user']}\nСлово - {CROCODILE_dict['current_word']} """)
 
                     else:
-                        put_text(
-                            f"""Отвечает - {CROCODILE_dict['current_user']}""")
+                        with use_scope('out'):
+                            clear('out')
+                            put_success(
+                                f"""Отвечает - {CROCODILE_dict['current_user']}""")
 
                     CROCODILE_dict['users_showed'].append(name)
 
                 await asyncio.sleep(1)
             await asyncio.sleep(1)
         else:
-            print('done')
+            with use_scope('out'):
+                clear('out')
+            msg_box.append(put_markdown(f"`📢`: Игра окончена"))
+            break
+
+
+async def who(msg_box, name):
+    global WHO_dict
+    online_users_copy = list(online_users.copy())
+    online_users_copy = [
+        el for el in online_users_copy if el[1] != 'Ведущий']
+
+    if WHO_dict['users'] is None:
+        WHO_dict['users'] = online_users_copy.copy()
+
+    style(put_scope('out'),
+          """display:flex;
+            justify-content:stretch;
+            font-weight: 400;
+            font-size: larger;
+            flex-direction: column;
+          """)
+
+    while True:
+        if WHO_dict['answered'] != (len(online_users) - 1):
+            if WHO_dict['current_user'] is None:
+
+                WHO_dict['current_user'] = WHO_dict['users'].pop(0)[
+                    0]
+                WHO_dict['current_word'] = WHO_dict['words'].pop(
+                    0)
+
+            else:
+                pass
+
+            if WHO_dict['current_state'] != 'guessing' or len(WHO_dict['users_showed']) != len(online_users):
+
+                if name not in WHO_dict['users_showed']:
+
+                    if name == WHO_dict['current_user']:
+
+                        with use_scope('out'):
+                            clear('out')
+                            put_success(
+                                f"""Ваш ход""")
+                        WHO_dict['current_state'] = 'guessing'
+
+                        def make_guessed():
+                            WHO_dict['current_state'] = 'guessed'
+                            WHO_dict['answered'] += 1
+
+                            WHO_dict['current_user'] = None
+                            WHO_dict['current_word'] = None
+
+                            WHO_dict['users_showed'].clear()
+
+                            return
+                        with use_scope('out'):
+                            style(put_button('Угадано', onclick=make_guessed),
+                                  """
+                                width: -webkit-fill-available;
+                                font-size: larger;
+                            """
+                                  )
+
+                    elif name == ADMIN_NAME:
+                        with use_scope('out'):
+                            clear('out')
+                            put_success(
+                                f"""Отвечает - {WHO_dict['current_user']}\nСлово - {WHO_dict['current_word']} """)
+
+                    else:
+                        with use_scope('out'):
+                            clear('out')
+                            put_success(
+                                f"""Отвечает - {WHO_dict['current_user']}\nСлово - {WHO_dict['current_word']} """)
+
+                    WHO_dict['users_showed'].append(name)
+
+                await asyncio.sleep(1)
+            await asyncio.sleep(1)
+        else:
+            with use_scope('out'):
+                clear('out')
+            msg_box.append(put_markdown(f"`📢`: Игра окончена"))
             break
 
 
 async def WHN_end(msg_box, name):
-    global taimer_tasks
+    global taimer_tasks, WHN_dict
     while WHN_dict['current_state'] != 'score':
         await asyncio.sleep(1)
 
@@ -208,31 +335,42 @@ async def WHN_end(msg_box, name):
         el for el in online_users_copy if el[1] != 'Ведущий']
     inp = []
     for el in online_users_copy:
-        print('el', el)
         inp.append(
             select(f'Вариант игрока {el[0]}', name=f'{el[0]}', options=[i for i in range(1, 6)]))
         WHN_dict['score'][el[0]] = 0
     score: dict = await input_group('Голосование', inp)
-    print(score, type(score))
 
     for key, value in score.items():
         WHN_dict['score'][key] += value
         WHN_dict['scored'] += 1
-    if WHN_dict['scored'] - 1 == len(online_users_copy):
-        chat_msgs.append(
-            (f'ВНИМАНИЕ', f"РЕЗУЛЬТАТЫ ИГРЫ"))
+        print(WHN_dict['score'])
+
+    while WHN_dict['scored'] != (len(online_users_copy) * (len(online_users_copy)+1)):
+        print(WHN_dict['scored'], len(online_users_copy))
+        await asyncio.sleep(1)
+
+    if WHN_dict['scored'] == (len(online_users_copy) * (len(online_users_copy)+1)):
+        await asyncio.sleep(3)
+        msg_box.append(put_markdown(f"`📢`: Игра окончена"))
+        msg_box.append(put_markdown(f'`ВНИМАНИЕ`: РЕЗУЛЬТАТЫ ИГРЫ'))
+        # chat_msgs.append(
+        #     (f'ВНИМАНИЕ', f"РЕЗУЛЬТАТЫ ИГРЫ"))
+        global max_score, winners
         max_score = 0
         winners = []
-        for key, value in score.items():
-            chat_msgs.append(
-                (f'{key}', f"{value} баллов"))
+        for key, value in WHN_dict['score'].items():
+            msg_box.append(put_markdown(f'`{key}`: {value} баллов'))
+            # chat_msgs.append(
+            #     (f'{key}', f"{value} баллов"))
             if value > max_score:
                 winners = [key]
-            elif value > max_score:
+                max_score = value
+            elif value >= max_score:
                 winners.append(key)
-
-        chat_msgs.append(
-            (f'ПОБЕДИТЕЛИ', f"{','.join(winners)}"))
+                max_score = value
+        msg_box.append(put_markdown(f"`ПОБЕДИТЕЛЬ`: {','.join(winners)}"))
+        # chat_msgs.append(
+        #     (f'ПОБЕДИТЕЛИ', f"{','.join(winners)}"))
 
 
 async def WHN(msg_box, name):
@@ -260,7 +398,7 @@ async def WHN(msg_box, name):
         if name == ADMIN_NAME and data['msg'].lower() == 'start':
             WHN_dict['current_state'] = 'waiting'
             if True:
-                await taimer(180)
+                await taimer(5)
 
             online_users_copy = list(online_users.copy())
             online_users_copy = [
@@ -291,4 +429,4 @@ async def WHN(msg_box, name):
 
 
 if __name__ == "__main__":
-    start_server(main, debug=True, port=8080, cdn=False)
+    start_server(main)

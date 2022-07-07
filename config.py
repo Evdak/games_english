@@ -1,6 +1,6 @@
 ADMIN_NAME = 'Настя'
 ADMIN_PASSWORD = '123'
-GAMES = ['ЧБД', 'Крокодил']
+GAMES = ['ЧБД', 'Крокодил', 'Кто я? Что я?']
 
 GAME_CROCODILE_WORDS = [
     "Tv-set",
@@ -13,4 +13,12 @@ GAME_CROCODILE_WORDS = [
     "Candle",
     "Suspicious",
     "Toy",
+]
+
+GAME_WHO_WORDS = [
+    "Bird",
+    "Britney Spears",
+    "James Bond",
+    "Mother",
+    "Blogger",
 ]
