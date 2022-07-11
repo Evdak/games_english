@@ -9,7 +9,7 @@ from pywebio.input import *
 from pywebio.output import *
 from pywebio.session import defer_call, info as session_info, run_async, run_js
 
-from config import ADMIN_NAME, ADMIN_PASSWORD, GAMES, GAME_CROCODILE_WORDS, GAME_WHO_WORDS
+from config import ADMIN_NAME, ADMIN_PASSWORD, GAMES, GAME_CROCODILE_WORDS, GAME_WHO_WORDS, WHN_TIME
 
 
 def start(event=None):
@@ -399,7 +399,7 @@ async def WHN(msg_box, name):
         if name == ADMIN_NAME and data['msg'].lower() == 'start':
             WHN_dict['current_state'] = 'waiting'
             if True:
-                await taimer(5)
+                await taimer(WHN_TIME)
 
             online_users_copy = list(online_users.copy())
             online_users_copy = [
@@ -412,7 +412,7 @@ async def WHN(msg_box, name):
                     ('Время вышло', f"Очередь - {WHN_dict['current_user']}"))
 
                 if True:
-                    await taimer(180)
+                    await taimer(WHN_TIME)
 
             chat_msgs.append(
                 ('Время вышло', f"Очередь - {ADMIN_NAME}"))

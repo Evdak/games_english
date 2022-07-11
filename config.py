@@ -1,6 +1,7 @@
 ADMIN_NAME = 'Настя'
 ADMIN_PASSWORD = '123'
 GAMES = ['ЧБД', 'Крокодил', 'Кто я? Что я?']
+WHN_TIME = 180  # в секундах
 
 GAME_CROCODILE_WORDS = [
     "Tv-set",
